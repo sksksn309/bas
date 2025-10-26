@@ -1,7 +1,7 @@
 -- 南烛游戏助手 - Roblox脚本助手
 local NanzhuHelper = {}
 
--- 存储最小化状态和窗口是否被永久关闭
+-- 存储状态
 NanzhuHelper.isMinimized = false
 NanzhuHelper.isClosed = false
 NanzhuHelper.isRotating = false
@@ -9,12 +9,16 @@ NanzhuHelper.rotationSpeed = 50
 NanzhuHelper.isFastRotating = false
 NanzhuHelper.fastRotationSpeed = 100
 
--- 星空按钮图标（Base64编码的简单星空图案）
-local starIcon = "rbxassetid://123456789" -- 替换为实际的星空图标AssetId
+-- 星空按钮图标
+local starIcon = "rbxassetid://123456789"
 
 -- 初始化UI
 function NanzhuHelper:InitUI()
     if self.isClosed then return end
+    
+    -- 发送欢迎消息
+    self:SendPrivateMessage("欢迎使用南烛游戏助手！")
+    self:SendPrivateMessage("此消息只有您自己能看见")
     
     -- 创建主界面
     self.ScreenGui = Instance.new("ScreenGui")
@@ -25,13 +29,27 @@ function NanzhuHelper:InitUI()
     self.MainFrame = Instance.new("Frame")
     self.MainFrame.Name = "MainFrame"
     self.MainFrame.Size = UDim2.new(0, 400, 0, 500)
-    self.MainFrame.Position = UDim2.new(0.5, -200, 0.5, -250) -- 屏幕中央
+    self.MainFrame.Position = UDim2.new(0.5, -200, 0.5, -250)
     self.MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
     self.MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
     self.MainFrame.BorderSizePixel = 0
     self.MainFrame.Parent = self.ScreenGui
     
-    -- 标题栏（添加拖动功能）
+    -- 阴影效果
+    local shadow = Instance.new("ImageLabel")
+    shadow.Name = "Shadow"
+    shadow.Size = UDim2.new(1, 10, 1, 10)
+    shadow.Position = UDim2.new(0, -5, 0, -5)
+    shadow.Image = "rbxassetid://1316045217"
+    shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+    shadow.ImageTransparency = 0.8
+    shadow.ScaleType = Enum.ScaleType.Slice
+    shadow.SliceCenter = Rect.new(10, 10, 118, 118)
+    shadow.BackgroundTransparency = 1
+    shadow.ZIndex = -1
+    shadow.Parent = self.MainFrame
+    
+    -- 标题栏
     local titleBar = Instance.new("Frame")
     titleBar.Name = "TitleBar"
     titleBar.Size = UDim2.new(1, 0, 0, 50)
@@ -40,7 +58,7 @@ function NanzhuHelper:InitUI()
     titleBar.BorderSizePixel = 0
     titleBar.Parent = self.MainFrame
     
-    -- 拖动功能实现
+    -- 拖动功能
     local dragging = false
     local dragInput, dragStart, startPos
 
@@ -125,20 +143,20 @@ function NanzhuHelper:InitUI()
     self.ReopenButton.Visible = false
     self.ReopenButton.Parent = self.ScreenGui
     
-    -- 加载提示
-    local loading = Instance.new("TextLabel")
-    loading.Name = "Loading"
-    loading.Text = "欢迎使用南烛游戏助手\n脚本功能加载中..."
-    loading.Size = UDim2.new(1, -40, 1, -60)
-    loading.Position = UDim2.new(0, 20, 0, 60)
-    loading.BackgroundTransparency = 1
-    loading.TextColor3 = Color3.fromRGB(200, 200, 200)
-    loading.Font = Enum.Font.Gotham
-    loading.TextSize = 18
-    loading.TextWrapped = true
-    loading.Parent = self.MainFrame
+    -- 右下角提示按钮
+    self.HintButton = Instance.new("TextButton")
+    self.HintButton.Name = "HintButton"
+    self.HintButton.Text = "提示"
+    self.HintButton.Size = UDim2.new(0, 60, 0, 30)
+    self.HintButton.Position = UDim2.new(1, -70, 1, -40)
+    self.HintButton.AnchorPoint = Vector2.new(1, 1)
+    self.HintButton.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    self.HintButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    self.HintButton.Font = Enum.Font.Gotham
+    self.HintButton.TextSize = 14
+    self.HintButton.Parent = self.MainFrame
     
-    -- 按钮事件绑定
+    -- 按钮事件
     minimizeButton.MouseButton1Click:Connect(function()
         self:ToggleMinimize()
     end)
@@ -151,14 +169,21 @@ function NanzhuHelper:InitUI()
         self:RestoreWindow()
     end)
     
-    -- 模拟加载
-    wait(2)
-    loading.Text = "欢迎使用南烛游戏助手\n脚本功能加载完毕！"
-    wait(1)
-    loading:Destroy()
+    self.HintButton.MouseButton1Click:Connect(function()
+        self:ShowNotification("点击主菜单按钮查看功能")
+    end)
     
     -- 创建功能界面
     self:CreateMainMenu()
+end
+
+-- 发送私密消息
+function NanzhuHelper:SendPrivateMessage(message)
+    local player = game:GetService("Players").LocalPlayer
+    if player and player.Character then
+        local chatService = game:GetService("Chat")
+        chatService:Chat(player.Character.Head, message, Enum.ChatColor.White)
+    end
 end
 
 -- 最小化/恢复窗口
@@ -215,7 +240,6 @@ function NanzhuHelper:ShowAdvancedNotification(title, message, duration)
     mainFrame.BorderSizePixel = 0
     mainFrame.Parent = notificationGui
     
-    -- 添加动画效果
     mainFrame.Position = UDim2.new(1, -320, 1, 100)
     mainFrame:TweenPosition(UDim2.new(1, -320, 1, -120), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3)
     
@@ -252,7 +276,7 @@ function NanzhuHelper:ShowAdvancedNotification(title, message, duration)
     end)
 end
 
--- 显示通知（改进版）
+-- 显示通知
 function NanzhuHelper:ShowNotification(message)
     if not self.MainFrame then return end
     
@@ -267,7 +291,6 @@ function NanzhuHelper:ShowNotification(message)
     notif.TextSize = 14
     notif.Parent = self.MainFrame
     
-    -- 添加淡入效果
     notif.BackgroundTransparency = 1
     notif.TextTransparency = 1
     notif:TweenBackgroundTransparency(0, Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3)
@@ -275,7 +298,6 @@ function NanzhuHelper:ShowNotification(message)
     
     spawn(function()
         wait(3)
-        -- 添加淡出效果
         notif:TweenBackgroundTransparency(1, Enum.EasingDirection.In, Enum.EasingStyle.Quad, 0.3)
         notif:TweenTextTransparency(1, Enum.EasingDirection.In, Enum.EasingStyle.Quad, 0.3, true, function()
             notif:Destroy()
@@ -319,7 +341,6 @@ function NanzhuHelper:StartRotation()
             end
             wait()
         end
-        -- 恢复自动旋转
         local character = game.Players.LocalPlayer.Character
         if character then
             local humanoid = character:FindFirstChildOfClass("Humanoid")
@@ -343,7 +364,6 @@ function NanzhuHelper:StartFastRotation()
             end
             wait()
         end
-        -- 恢复自动旋转
         local character = game.Players.LocalPlayer.Character
         if character then
             local humanoid = character:FindFirstChildOfClass("Humanoid")
@@ -356,7 +376,6 @@ end
 
 -- 创建主菜单
 function NanzhuHelper:CreateMainMenu()
-    -- 创建滚动框架
     local scrollFrame = Instance.new("ScrollingFrame")
     scrollFrame.Name = "ScrollFrame"
     scrollFrame.Size = UDim2.new(1, -40, 1, -60)
@@ -367,26 +386,22 @@ function NanzhuHelper:CreateMainMenu()
     scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
     scrollFrame.Parent = self.MainFrame
     
-    -- 创建按钮容器
     local buttonContainer = Instance.new("Frame")
     buttonContainer.Name = "ButtonContainer"
     buttonContainer.Size = UDim2.new(1, 0, 0, 0)
     buttonContainer.BackgroundTransparency = 1
     buttonContainer.Parent = scrollFrame
     
-    -- 创建布局
     local layout = Instance.new("UIListLayout")
     layout.Name = "Layout"
     layout.Padding = UDim.new(0, 10)
     layout.Parent = buttonContainer
     
-    -- 更新CanvasSize
     layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         scrollFrame.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y)
         buttonContainer.Size = UDim2.new(1, 0, 0, layout.AbsoluteContentSize.Y)
     end)
     
-    -- 通用功能按钮
     local universalButton = Instance.new("TextButton")
     universalButton.Name = "UniversalButton"
     universalButton.Text = "通用功能"
@@ -397,7 +412,6 @@ function NanzhuHelper:CreateMainMenu()
     universalButton.TextSize = 16
     universalButton.Parent = buttonContainer
     
-    -- 其他功能按钮...
     local otherButton = Instance.new("TextButton")
     otherButton.Name = "OtherButton"
     otherButton.Text = "其他功能"
@@ -408,7 +422,6 @@ function NanzhuHelper:CreateMainMenu()
     otherButton.TextSize = 16
     otherButton.Parent = buttonContainer
     
-    -- 按钮点击事件
     universalButton.MouseButton1Click:Connect(function()
         self:CreateUniversalMenu(buttonContainer)
     end)
@@ -416,14 +429,12 @@ end
 
 -- 创建通用功能菜单
 function NanzhuHelper:CreateUniversalMenu(container)
-    -- 清空容器
     for _, child in ipairs(container:GetChildren()) do
         if child:IsA("GuiObject") then
             child:Destroy()
         end
     end
     
-    -- 返回按钮
     local backButton = Instance.new("TextButton")
     backButton.Name = "BackButton"
     backButton.Text = "← 返回"
@@ -434,7 +445,6 @@ function NanzhuHelper:CreateUniversalMenu(container)
     backButton.TextSize = 16
     backButton.Parent = container
     
-    -- 快速旋转按钮
     local rotationButton = Instance.new("TextButton")
     rotationButton.Name = "RotationButton"
     rotationButton.Text = "快速旋转 (速度50)"
@@ -445,7 +455,6 @@ function NanzhuHelper:CreateUniversalMenu(container)
     rotationButton.TextSize = 16
     rotationButton.Parent = container
     
-    -- 极速旋转按钮
     local fastRotationButton = Instance.new("TextButton")
     fastRotationButton.Name = "FastRotationButton"
     fastRotationButton.Text = "极速旋转 (速度100)"
@@ -456,7 +465,6 @@ function NanzhuHelper:CreateUniversalMenu(container)
     fastRotationButton.TextSize = 16
     fastRotationButton.Parent = container
     
-    -- 按钮事件
     backButton.MouseButton1Click:Connect(function()
         self:CreateMainMenu()
     end)
