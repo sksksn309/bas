@@ -4,6 +4,10 @@ local NanzhuHelper = {}
 -- 存储最小化状态和窗口是否被永久关闭
 NanzhuHelper.isMinimized = false
 NanzhuHelper.isClosed = false
+NanzhuHelper.isRotating = false
+NanzhuHelper.rotationSpeed = 50
+NanzhuHelper.isFastRotating = false
+NanzhuHelper.fastRotationSpeed = 100
 
 -- 星空按钮图标（Base64编码的简单星空图案）
 local starIcon = "rbxassetid://123456789" -- 替换为实际的星空图标AssetId
@@ -21,13 +25,13 @@ function NanzhuHelper:InitUI()
     self.MainFrame = Instance.new("Frame")
     self.MainFrame.Name = "MainFrame"
     self.MainFrame.Size = UDim2.new(0, 400, 0, 500)
-    self.MainFrame.Position = UDim2.new(0.5, -200, 0.5, -250)
+    self.MainFrame.Position = UDim2.new(0.5, -200, 0.5, -250) -- 屏幕中央
     self.MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
     self.MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
     self.MainFrame.BorderSizePixel = 0
     self.MainFrame.Parent = self.ScreenGui
     
-    -- 标题栏
+    -- 标题栏（添加拖动功能）
     local titleBar = Instance.new("Frame")
     titleBar.Name = "TitleBar"
     titleBar.Size = UDim2.new(1, 0, 0, 50)
@@ -35,6 +39,41 @@ function NanzhuHelper:InitUI()
     titleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
     titleBar.BorderSizePixel = 0
     titleBar.Parent = self.MainFrame
+    
+    -- 拖动功能实现
+    local dragging = false
+    local dragInput, dragStart, startPos
+
+    local function update(input)
+        local delta = input.Position - dragStart
+        self.MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+
+    titleBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = self.MainFrame.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    titleBar.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
+            dragInput = input
+        end
+    end)
+
+    game:GetService("UserInputService").InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            update(input)
+        end
+    end)
     
     -- 标题
     local title = Instance.new("TextLabel")
@@ -244,14 +283,191 @@ function NanzhuHelper:ShowNotification(message)
     end)
 end
 
--- 创建主菜单（保持不变）
-function NanzhuHelper:CreateMainMenu()
-    -- 原有代码保持不变...
+-- 旋转角色功能
+function NanzhuHelper:ToggleRotation()
+    if self.isRotating then
+        self.isRotating = false
+        self:ShowNotification("快速旋转已关闭")
+    else
+        self.isRotating = true
+        self:ShowNotification("快速旋转已开启 - 速度: " .. self.rotationSpeed)
+        self:StartRotation()
+    end
 end
 
--- 创建通用功能菜单（保持不变）
+function NanzhuHelper:ToggleFastRotation()
+    if self.isFastRotating then
+        self.isFastRotating = false
+        self:ShowNotification("极速旋转已关闭")
+    else
+        self.isFastRotating = true
+        self:ShowNotification("极速旋转已开启 - 速度: " .. self.fastRotationSpeed)
+        self:StartFastRotation()
+    end
+end
+
+function NanzhuHelper:StartRotation()
+    spawn(function()
+        while self.isRotating do
+            local character = game.Players.LocalPlayer.Character
+            if character then
+                local humanoid = character:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    humanoid.AutoRotate = false
+                    character:SetPrimaryPartCFrame(character.PrimaryPart.CFrame * CFrame.Angles(0, math.rad(self.rotationSpeed), 0))
+                end
+            end
+            wait()
+        end
+        -- 恢复自动旋转
+        local character = game.Players.LocalPlayer.Character
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.AutoRotate = true
+            end
+        end
+    end)
+end
+
+function NanzhuHelper:StartFastRotation()
+    spawn(function()
+        while self.isFastRotating do
+            local character = game.Players.LocalPlayer.Character
+            if character then
+                local humanoid = character:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    humanoid.AutoRotate = false
+                    character:SetPrimaryPartCFrame(character.PrimaryPart.CFrame * CFrame.Angles(0, math.rad(self.fastRotationSpeed), 0))
+                end
+            end
+            wait()
+        end
+        -- 恢复自动旋转
+        local character = game.Players.LocalPlayer.Character
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.AutoRotate = true
+            end
+        end
+    end)
+end
+
+-- 创建主菜单
+function NanzhuHelper:CreateMainMenu()
+    -- 创建滚动框架
+    local scrollFrame = Instance.new("ScrollingFrame")
+    scrollFrame.Name = "ScrollFrame"
+    scrollFrame.Size = UDim2.new(1, -40, 1, -60)
+    scrollFrame.Position = UDim2.new(0, 20, 0, 60)
+    scrollFrame.BackgroundTransparency = 1
+    scrollFrame.BorderSizePixel = 0
+    scrollFrame.ScrollBarThickness = 5
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    scrollFrame.Parent = self.MainFrame
+    
+    -- 创建按钮容器
+    local buttonContainer = Instance.new("Frame")
+    buttonContainer.Name = "ButtonContainer"
+    buttonContainer.Size = UDim2.new(1, 0, 0, 0)
+    buttonContainer.BackgroundTransparency = 1
+    buttonContainer.Parent = scrollFrame
+    
+    -- 创建布局
+    local layout = Instance.new("UIListLayout")
+    layout.Name = "Layout"
+    layout.Padding = UDim.new(0, 10)
+    layout.Parent = buttonContainer
+    
+    -- 更新CanvasSize
+    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        scrollFrame.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y)
+        buttonContainer.Size = UDim2.new(1, 0, 0, layout.AbsoluteContentSize.Y)
+    end)
+    
+    -- 通用功能按钮
+    local universalButton = Instance.new("TextButton")
+    universalButton.Name = "UniversalButton"
+    universalButton.Text = "通用功能"
+    universalButton.Size = UDim2.new(1, 0, 0, 40)
+    universalButton.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    universalButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    universalButton.Font = Enum.Font.Gotham
+    universalButton.TextSize = 16
+    universalButton.Parent = buttonContainer
+    
+    -- 其他功能按钮...
+    local otherButton = Instance.new("TextButton")
+    otherButton.Name = "OtherButton"
+    otherButton.Text = "其他功能"
+    otherButton.Size = UDim2.new(1, 0, 0, 40)
+    otherButton.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    otherButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    otherButton.Font = Enum.Font.Gotham
+    otherButton.TextSize = 16
+    otherButton.Parent = buttonContainer
+    
+    -- 按钮点击事件
+    universalButton.MouseButton1Click:Connect(function()
+        self:CreateUniversalMenu(buttonContainer)
+    end)
+end
+
+-- 创建通用功能菜单
 function NanzhuHelper:CreateUniversalMenu(container)
-    -- 原有代码保持不变...
+    -- 清空容器
+    for _, child in ipairs(container:GetChildren()) do
+        if child:IsA("GuiObject") then
+            child:Destroy()
+        end
+    end
+    
+    -- 返回按钮
+    local backButton = Instance.new("TextButton")
+    backButton.Name = "BackButton"
+    backButton.Text = "← 返回"
+    backButton.Size = UDim2.new(1, 0, 0, 40)
+    backButton.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+    backButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    backButton.Font = Enum.Font.Gotham
+    backButton.TextSize = 16
+    backButton.Parent = container
+    
+    -- 快速旋转按钮
+    local rotationButton = Instance.new("TextButton")
+    rotationButton.Name = "RotationButton"
+    rotationButton.Text = "快速旋转 (速度50)"
+    rotationButton.Size = UDim2.new(1, 0, 0, 40)
+    rotationButton.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    rotationButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    rotationButton.Font = Enum.Font.Gotham
+    rotationButton.TextSize = 16
+    rotationButton.Parent = container
+    
+    -- 极速旋转按钮
+    local fastRotationButton = Instance.new("TextButton")
+    fastRotationButton.Name = "FastRotationButton"
+    fastRotationButton.Text = "极速旋转 (速度100)"
+    fastRotationButton.Size = UDim2.new(1, 0, 0, 40)
+    fastRotationButton.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    fastRotationButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    fastRotationButton.Font = Enum.Font.Gotham
+    fastRotationButton.TextSize = 16
+    fastRotationButton.Parent = container
+    
+    -- 按钮事件
+    backButton.MouseButton1Click:Connect(function()
+        self:CreateMainMenu()
+    end)
+    
+    rotationButton.MouseButton1Click:Connect(function()
+        self:ToggleRotation()
+    end)
+    
+    fastRotationButton.MouseButton1Click:Connect(function()
+        self:ToggleFastRotation()
+    end)
 end
 
 -- 启动助手
